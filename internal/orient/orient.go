@@ -102,6 +102,9 @@ func NewDetector(settle time.Duration) *Detector {
 	return &Detector{settle: settle, current: Unknown, candidate: Unknown}
 }
 
+func (d *Detector) SetSettle(settle time.Duration) { d.settle = settle }
+func (d *Detector) Settle() time.Duration          { return d.settle }
+
 // Current is the last reported orientation, or Unknown before the first.
 func (d *Detector) Current() Orientation { return d.current }
 

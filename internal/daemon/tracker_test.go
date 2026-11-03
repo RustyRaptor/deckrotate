@@ -28,7 +28,7 @@ var (
 
 func TestTrackerFeedsSettledTurns(t *testing.T) {
 	sink := &fakeSink{}
-	tr := NewTracker(sink, 300*time.Millisecond)
+	tr := NewTracker(sink, fixed(300*time.Millisecond))
 	t0 := time.Unix(0, 0)
 	feed := func(s imu.Sample, from, to time.Duration) {
 		for d := from; d <= to; d += 4 * time.Millisecond {
@@ -50,7 +50,7 @@ func TestTrackerFeedsSettledTurns(t *testing.T) {
 
 func TestTrackerReportsLostIMU(t *testing.T) {
 	sink := &fakeSink{}
-	tr := NewTracker(sink, 300*time.Millisecond)
+	tr := NewTracker(sink, fixed(300*time.Millisecond))
 	tr.Sample(time.Unix(0, 0), landscape)
 	tr.Lost()
 	tr.Lost()
@@ -60,3 +60,23 @@ func TestTrackerReportsLostIMU(t *testing.T) {
 		t.Errorf("imu = %v, want %v", sink.imu, want)
 	}
 }
+
+func TestTrackerFollowsSettleChanges(t *testing.T) {
+	sink := &fakeSink{}
+	settle := 2 * time.Second
+	tr := NewTracker(sink, func() time.Duration { return settle })
+	t0 := time.Unix(0, 0)
+	for d := time.Duration(0); d <= 500*time.Millisecond; d += 4 * time.Millisecond {
+		tr.Sample(t0.Add(d), landscape)
+	}
+	if len(sink.turns) != 0 {
+		t.Fatalf("reported before the 2 s settle: %v", sink.turns)
+	}
+	settle = 100 * time.Millisecond
+	tr.Sample(t0.Add(600*time.Millisecond), landscape)
+	if len(sink.turns) != 1 || sink.turns[0] != orient.Landscape {
+		t.Errorf("turns = %v after shortening settle", sink.turns)
+	}
+}
+
+func fixed(d time.Duration) func() time.Duration { return func() time.Duration { return d } }

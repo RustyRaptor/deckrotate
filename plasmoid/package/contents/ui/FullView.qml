@@ -165,6 +165,40 @@ Item {
             }
         }
 
+        GridLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: Kirigami.Units.smallSpacing
+            columns: 2
+
+            PlasmaComponents3.Label {
+                Layout.fillWidth: true
+                text: tr("Rotate after holding still for")
+                wrapMode: Text.Wrap
+            }
+            SecondsSpinBox {
+                objectName: "settleSpin"
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+                enabled: view.backend.imu
+                range: Logic.settleRange
+                backendValue: view.backend.settleMs
+                onChosen: (ms) => view.backend.setSettleMs(ms)
+            }
+
+            PlasmaComponents3.Label {
+                Layout.fillWidth: true
+                text: tr("Keep the rotate button for")
+                wrapMode: Text.Wrap
+            }
+            SecondsSpinBox {
+                objectName: "promptSpin"
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+                enabled: view.backend.imu && view.backend.mode === "manual"
+                range: Logic.promptRange
+                backendValue: view.backend.promptTimeoutMs
+                onChosen: (ms) => view.backend.setPromptTimeoutMs(ms)
+            }
+        }
+
         PlasmaComponents3.Label {
             objectName: "deviceLabel"
             Layout.fillWidth: true

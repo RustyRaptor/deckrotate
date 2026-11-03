@@ -186,3 +186,20 @@ func TestDetectorFlatKeepsOrientationAndResetsCandidate(t *testing.T) {
 		t.Fatalf("got %v,%v; want portrait-cw,true", o, ok)
 	}
 }
+
+func TestDetectorSettleCanChange(t *testing.T) {
+	d := NewDetector(400 * time.Millisecond)
+	t0 := time.Unix(1000, 0)
+	d.Update(t0, vec(0))
+	d.Update(t0.Add(400*time.Millisecond), vec(0))
+
+	d.SetSettle(100 * time.Millisecond)
+	at := t0.Add(time.Second)
+	d.Update(at, vec(90))
+	if o, ok := d.Update(at.Add(100*time.Millisecond), vec(90)); !ok || o != PortraitCW {
+		t.Fatalf("shorter settle not honoured: %v,%v", o, ok)
+	}
+	if d.Settle() != 100*time.Millisecond {
+		t.Errorf("Settle() = %v", d.Settle())
+	}
+}

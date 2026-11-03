@@ -27,6 +27,7 @@ func (c *Client) Status() (Status, error) {
 		"Mode": &s.Mode, "Locked": &s.Locked,
 		"DeviceOrientation": &s.Device, "ScreenOrientation": &s.Screen,
 		"SuggestedOrientation": &s.Suggested, "ImuAvailable": &s.IMU,
+		"SettleMs": &s.SettleMs, "PromptTimeoutMs": &s.PromptTimeoutMs,
 	} {
 		v, ok := all[name]
 		if !ok {

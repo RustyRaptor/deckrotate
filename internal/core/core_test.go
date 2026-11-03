@@ -95,12 +95,11 @@ func newRig(t *testing.T, s Settings) *rig {
 		clock:  &fakeClock{},
 	}
 	r.c = New(Deps{
-		Screen:        r.screen,
-		Prompt:        r.prompt,
-		Store:         r.store,
-		AfterFunc:     r.clock.AfterFunc,
-		PromptTimeout: 5 * time.Second,
-		OnChange:      func(s State) { r.states = append(r.states, s) },
+		Screen:    r.screen,
+		Prompt:    r.prompt,
+		Store:     r.store,
+		AfterFunc: r.clock.AfterFunc,
+		OnChange:  func(s State) { r.states = append(r.states, s) },
 	})
 	if err := r.c.Init(context.Background()); err != nil {
 		t.Fatal(err)
@@ -113,7 +112,8 @@ var ctx = context.Background()
 func TestInitLoadsSettingsAndScreen(t *testing.T) {
 	r := newRig(t, Settings{Mode: Manual, Locked: true})
 	got := r.c.State()
-	want := State{Mode: Manual, Locked: true, Device: orient.Unknown, Screen: orient.Landscape, Suggested: orient.Unknown}
+	want := State{Mode: Manual, Locked: true, Device: orient.Unknown, Screen: orient.Landscape, Suggested: orient.Unknown,
+		Settle: DefaultSettle, PromptTimeout: DefaultPromptTimeout}
 	if got != want {
 		t.Errorf("State = %+v, want %+v", got, want)
 	}
@@ -339,5 +339,75 @@ func TestModeStrings(t *testing.T) {
 	}
 	if _, err := ParseMode("sometimes"); err == nil {
 		t.Error("ParseMode(sometimes) should fail")
+	}
+}
+
+func TestTimingDefaults(t *testing.T) {
+	if DefaultSettle != 500*time.Millisecond || DefaultPromptTimeout != 5*time.Second {
+		t.Errorf("defaults = %v, %v", DefaultSettle, DefaultPromptTimeout)
+	}
+}
+
+func TestInitUsesSavedTimings(t *testing.T) {
+	r := newRig(t, Settings{SettleMS: 800, PromptTimeoutMS: 12000})
+	st := r.c.State()
+	if st.Settle != 800*time.Millisecond || st.PromptTimeout != 12*time.Second {
+		t.Errorf("state timings = %v, %v", st.Settle, st.PromptTimeout)
+	}
+}
+
+func TestInitClampsSavedTimings(t *testing.T) {
+	r := newRig(t, Settings{SettleMS: 5, PromptTimeoutMS: 999999})
+	st := r.c.State()
+	if st.Settle != MinSettle || st.PromptTimeout != MaxPromptTimeout {
+		t.Errorf("state timings = %v, %v; want clamped to %v, %v", st.Settle, st.PromptTimeout, MinSettle, MaxPromptTimeout)
+	}
+}
+
+func TestSetSettle(t *testing.T) {
+	r := newRig(t, Settings{Mode: Manual, Locked: true})
+	if err := r.c.SetSettle(1200 * time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	if r.c.State().Settle != 1200*time.Millisecond {
+		t.Errorf("Settle = %v", r.c.State().Settle)
+	}
+	want := Settings{Mode: Manual, Locked: true, SettleMS: 1200, PromptTimeoutMS: 5000}
+	if r.store.s != want {
+		t.Errorf("saved %+v, want %+v", r.store.s, want)
+	}
+	for _, bad := range []time.Duration{MinSettle - time.Millisecond, MaxSettle + time.Millisecond} {
+		if err := r.c.SetSettle(bad); !errors.Is(err, ErrOutOfRange) {
+			t.Errorf("SetSettle(%v) err = %v, want ErrOutOfRange", bad, err)
+		}
+	}
+	if r.c.State().Settle != 1200*time.Millisecond {
+		t.Errorf("rejected value changed Settle to %v", r.c.State().Settle)
+	}
+}
+
+func TestSetPromptTimeoutAppliesToNextPrompt(t *testing.T) {
+	r := newRig(t, Settings{Mode: Manual})
+	if err := r.c.SetPromptTimeout(8 * time.Second); err != nil {
+		t.Fatal(err)
+	}
+	r.c.DeviceTurned(ctx, orient.PortraitCW)
+	if got := r.clock.timers[len(r.clock.timers)-1].d; got != 8*time.Second {
+		t.Errorf("prompt timer = %v, want 8s", got)
+	}
+	if r.store.s.PromptTimeoutMS != 8000 {
+		t.Errorf("saved %+v", r.store.s)
+	}
+	if err := r.c.SetPromptTimeout(time.Second); !errors.Is(err, ErrOutOfRange) {
+		t.Errorf("SetPromptTimeout(1s) err = %v", err)
+	}
+}
+
+func TestModeAndLockKeepTimings(t *testing.T) {
+	r := newRig(t, Settings{SettleMS: 900, PromptTimeoutMS: 7000})
+	r.c.SetLocked(ctx, true)
+	r.c.SetMode(ctx, Manual)
+	if r.store.s.SettleMS != 900 || r.store.s.PromptTimeoutMS != 7000 {
+		t.Errorf("saving mode/lock lost timings: %+v", r.store.s)
 	}
 }

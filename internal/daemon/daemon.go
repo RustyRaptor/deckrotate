@@ -21,11 +21,9 @@ import (
 )
 
 type Options struct {
-	UIDir         string // holds overlay.qml
-	QMLBin        string
-	Settle        time.Duration
-	PromptTimeout time.Duration
-	SysRoot       string
+	UIDir   string // holds overlay.qml
+	QMLBin  string
+	SysRoot string
 }
 
 func Run(ctx context.Context, o Options) error {
@@ -36,6 +34,7 @@ func Run(ctx context.Context, o Options) error {
 	defer conn.Close()
 
 	var svc atomic.Pointer[service.Service]
+	var settle atomic.Int64
 	var ctrl *core.Controller
 	prompt := overlay.NewProcessPrompt(
 		func(ctx context.Context, p overlay.Placement) *exec.Cmd {
@@ -53,11 +52,11 @@ func Run(ctx context.Context, o Options) error {
 		},
 	)
 	ctrl = core.New(core.Deps{
-		Screen:        display.NewKScreen(display.ExecRunner),
-		Prompt:        prompt,
-		Store:         config.NewFileStore(config.DefaultPath()),
-		PromptTimeout: o.PromptTimeout,
+		Screen: display.NewKScreen(display.ExecRunner),
+		Prompt: prompt,
+		Store:  config.NewFileStore(config.DefaultPath()),
 		OnChange: func(st core.State) {
+			settle.Store(int64(st.Settle))
 			if s := svc.Load(); s != nil {
 				s.Publish(st)
 			}
@@ -75,7 +74,7 @@ func Run(ctx context.Context, o Options) error {
 	st := ctrl.State()
 	log.Printf("deckrotate running: mode=%v locked=%v screen=%v", st.Mode, st.Locked, st.Screen)
 
-	go readIMU(ctx, o.SysRoot, NewTracker(ctrl, o.Settle))
+	go readIMU(ctx, o.SysRoot, NewTracker(ctrl, func() time.Duration { return time.Duration(settle.Load()) }))
 	<-ctx.Done()
 	prompt.Hide()
 	return nil

@@ -54,3 +54,15 @@ func TestDefaultPathUsesXDG(t *testing.T) {
 		t.Errorf("DefaultPath = %q", got)
 	}
 }
+
+func TestTimingsRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	want := core.Settings{Mode: core.Auto, SettleMS: 750, PromptTimeoutMS: 9000}
+	if err := NewFileStore(path).Save(want); err != nil {
+		t.Fatal(err)
+	}
+	got, err := NewFileStore(path).Load()
+	if err != nil || got != want {
+		t.Errorf("Load = %+v, %v; want %+v", got, err, want)
+	}
+}

@@ -25,6 +25,9 @@ func TestParseCommand(t *testing.T) {
 		{"rotate portrait-cw", "RotateTo", []any{"portrait-cw"}},
 		{"rotate portrait-ccw", "RotateTo", []any{"portrait-ccw"}},
 		{"rotate landscape-flipped", "RotateTo", []any{"landscape-flipped"}},
+		{"settle 700ms", "SetSettleMs", []any{int32(700)}},
+		{"settle 1.5s", "SetSettleMs", []any{int32(1500)}},
+		{"prompt-timeout 8s", "SetPromptTimeoutMs", []any{int32(8000)}},
 		{"accept", "Accept", nil},
 		{"dismiss", "Dismiss", nil},
 	}
@@ -37,7 +40,8 @@ func TestParseCommand(t *testing.T) {
 }
 
 func TestParseCommandErrors(t *testing.T) {
-	for _, args := range []string{"", "spin", "mode", "mode sometimes", "rotate", "rotate diagonal", "lock now"} {
+	for _, args := range []string{"", "spin", "mode", "mode sometimes", "rotate", "rotate diagonal", "lock now",
+		"settle", "settle fast", "settle 1s 2s", "prompt-timeout", "settle 10000h"} {
 		if _, _, err := parseCommand(strings.Fields(args)); err == nil {
 			t.Errorf("parseCommand(%q) should fail", args)
 		}
@@ -46,7 +50,8 @@ func TestParseCommandErrors(t *testing.T) {
 
 func TestFormatStatus(t *testing.T) {
 	got := formatStatus(statusFixture)
-	want := "mode:      manual\nlocked:    yes\ndevice:    portrait-cw\nscreen:    landscape\nsuggested: portrait-cw\nimu:       ok\n"
+	want := "mode:      manual\nlocked:    yes\ndevice:    portrait-cw\nscreen:    landscape\nsuggested: portrait-cw\nimu:       ok\n" +
+		"settle:    700ms\nbutton:    8s\n"
 	if got != want {
 		t.Errorf("formatStatus =\n%s\nwant\n%s", got, want)
 	}

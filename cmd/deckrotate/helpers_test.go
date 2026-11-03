@@ -5,4 +5,5 @@ import "github.com/RustyRaptor/deckrotate/internal/service"
 var statusFixture = service.Status{
 	Mode: "manual", Locked: true, Device: "portrait-cw",
 	Screen: "landscape", Suggested: "portrait-cw", IMU: true,
+	SettleMs: 700, PromptTimeoutMs: 8000,
 }

@@ -42,10 +42,31 @@ func (m *Mode) UnmarshalText(b []byte) (err error) {
 	return err
 }
 
-// Settings are the user choices that survive restarts.
+const (
+	DefaultSettle        = 500 * time.Millisecond
+	MinSettle            = 100 * time.Millisecond
+	MaxSettle            = 3 * time.Second
+	DefaultPromptTimeout = 5 * time.Second
+	MinPromptTimeout     = 2 * time.Second
+	MaxPromptTimeout     = 30 * time.Second
+)
+
+var ErrOutOfRange = errors.New("value out of range")
+
+// Settings are the user choices that survive restarts. Zero timings mean
+// "use the default".
 type Settings struct {
-	Mode   Mode `json:"mode"`
-	Locked bool `json:"locked"`
+	Mode            Mode `json:"mode"`
+	Locked          bool `json:"locked"`
+	SettleMS        int  `json:"settle_ms,omitempty"`
+	PromptTimeoutMS int  `json:"prompt_timeout_ms,omitempty"`
+}
+
+func timing(ms int, def, lo, hi time.Duration) time.Duration {
+	if ms == 0 {
+		return def
+	}
+	return min(max(time.Duration(ms)*time.Millisecond, lo), hi)
 }
 
 type State struct {
@@ -55,6 +76,9 @@ type State struct {
 	Screen    orient.Orientation // what the panel is rotated for
 	Suggested orient.Orientation // manual-mode prompt target, Unknown when none
 	IMU       bool               // accelerometer is delivering data
+
+	Settle        time.Duration // how long a new orientation must hold
+	PromptTimeout time.Duration // how long the manual-mode button stays up
 }
 
 type Screen interface {
@@ -77,12 +101,11 @@ type Store interface {
 type Timer interface{ Stop() bool }
 
 type Deps struct {
-	Screen        Screen
-	Prompt        Prompt
-	Store         Store
-	AfterFunc     func(time.Duration, func()) Timer
-	PromptTimeout time.Duration
-	OnChange      func(State)
+	Screen    Screen
+	Prompt    Prompt
+	Store     Store
+	AfterFunc func(time.Duration, func()) Timer
+	OnChange  func(State)
 }
 
 var ErrNothingToAccept = errors.New("no rotation is being offered")
@@ -112,6 +135,8 @@ func (c *Controller) Init(ctx context.Context) error {
 	}
 	return c.update(func() error {
 		c.st.Mode, c.st.Locked = s.Mode, s.Locked
+		c.st.Settle = timing(s.SettleMS, DefaultSettle, MinSettle, MaxSettle)
+		c.st.PromptTimeout = timing(s.PromptTimeoutMS, DefaultPromptTimeout, MinPromptTimeout, MaxPromptTimeout)
 		return c.refreshScreen(ctx)
 	})
 }
@@ -150,7 +175,12 @@ func (c *Controller) apply(ctx context.Context, o orient.Orientation) error {
 }
 
 func (c *Controller) save() error {
-	return c.d.Store.Save(Settings{Mode: c.st.Mode, Locked: c.st.Locked})
+	return c.d.Store.Save(Settings{
+		Mode:            c.st.Mode,
+		Locked:          c.st.Locked,
+		SettleMS:        int(c.st.Settle / time.Millisecond),
+		PromptTimeoutMS: int(c.st.PromptTimeout / time.Millisecond),
+	})
 }
 
 func (c *Controller) withdraw() {
@@ -177,7 +207,7 @@ func (c *Controller) offer(o orient.Orientation) {
 	gen := c.gen
 	c.st.Suggested = o
 	c.d.Prompt.Show(o, c.st.Screen)
-	c.timer = c.d.AfterFunc(c.d.PromptTimeout, func() {
+	c.timer = c.d.AfterFunc(c.st.PromptTimeout, func() {
 		c.update(func() error {
 			if c.gen == gen {
 				c.withdraw()
@@ -247,6 +277,27 @@ func (c *Controller) SetLocked(ctx context.Context, locked bool) error {
 
 func (c *Controller) ToggleLock(ctx context.Context) error {
 	return c.SetLocked(ctx, !c.State().Locked)
+}
+
+func (c *Controller) SetSettle(d time.Duration) error {
+	if d < MinSettle || d > MaxSettle {
+		return fmt.Errorf("settle time %v: %w (%v to %v)", d, ErrOutOfRange, MinSettle, MaxSettle)
+	}
+	return c.update(func() error {
+		c.st.Settle = d
+		return c.save()
+	})
+}
+
+// SetPromptTimeout applies from the next manual-mode prompt.
+func (c *Controller) SetPromptTimeout(d time.Duration) error {
+	if d < MinPromptTimeout || d > MaxPromptTimeout {
+		return fmt.Errorf("button timeout %v: %w (%v to %v)", d, ErrOutOfRange, MinPromptTimeout, MaxPromptTimeout)
+	}
+	return c.update(func() error {
+		c.st.PromptTimeout = d
+		return c.save()
+	})
 }
 
 // RotateTo is an explicit user request; it works regardless of mode and lock.

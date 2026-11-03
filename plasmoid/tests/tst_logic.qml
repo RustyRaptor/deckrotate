@@ -48,4 +48,30 @@ TestCase {
     function test_summary(data) {
         compare(Logic.summary(data.b), data.want)
     }
+
+    function test_seconds_data() {
+        return [
+            { tag: "half", ms: 500, want: "0.5 s" },
+            { tag: "tenth", ms: 100, want: "0.1 s" },
+            { tag: "one-half", ms: 1500, want: "1.5 s" },
+            { tag: "whole", ms: 5000, want: "5 s" },
+            { tag: "big", ms: 30000, want: "30 s" }
+        ]
+    }
+
+    function test_seconds(data) {
+        compare(Logic.seconds(data.ms), data.want)
+    }
+
+    function test_parse_seconds() {
+        compare(Logic.parseSeconds("0.5 s"), 500)
+        compare(Logic.parseSeconds("12"), 12000)
+        compare(Logic.parseSeconds("1,5 s"), 1500)
+        verify(isNaN(Logic.parseSeconds("soon")))
+    }
+
+    function test_limits() {
+        compare(Logic.settleRange, { from: 100, to: 3000, step: 100 })
+        compare(Logic.promptRange, { from: 2000, to: 30000, step: 1000 })
+    }
 }

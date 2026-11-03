@@ -19,13 +19,16 @@ type Sink interface {
 // Tracker turns raw IMU samples into settled orientation changes. It is not
 // safe for concurrent use; feed it from the single IMU reader goroutine.
 type Tracker struct {
-	sink  Sink
-	det   *orient.Detector
-	alive bool
+	sink   Sink
+	settle func() time.Duration
+	det    *orient.Detector
+	alive  bool
 }
 
-func NewTracker(sink Sink, settle time.Duration) *Tracker {
-	return &Tracker{sink: sink, det: orient.NewDetector(settle)}
+// NewTracker asks settle for the current settle time on every sample, so
+// changes made through the applet apply immediately.
+func NewTracker(sink Sink, settle func() time.Duration) *Tracker {
+	return &Tracker{sink: sink, settle: settle, det: orient.NewDetector(settle())}
 }
 
 func (t *Tracker) Sample(at time.Time, s imu.Sample) {
@@ -33,6 +36,7 @@ func (t *Tracker) Sample(at time.Time, s imu.Sample) {
 		t.alive = true
 		t.sink.SetIMUAvailable(true)
 	}
+	t.det.SetSettle(t.settle())
 	if o, changed := t.det.Update(at, s.Vec()); changed {
 		log.Printf("deck turned to %v", o)
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

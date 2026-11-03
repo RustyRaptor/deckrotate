@@ -51,6 +51,15 @@ Item {
             tryCompare(backend, "mode", "auto")
         }
 
+        function test_4b_timings() {
+            tryCompare(backend, "settleMs", 500)
+            compare(backend.promptTimeoutMs, 5000)
+            backend.setSettleMs(800)
+            tryCompare(backend, "settleMs", 800)
+            backend.setPromptTimeoutMs(9000)
+            tryCompare(backend, "promptTimeoutMs", 9000)
+        }
+
         function test_5_types_are_plain() {
             compare(typeof backend.mode, "string")
             compare(typeof backend.locked, "boolean")

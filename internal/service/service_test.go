@@ -91,6 +91,10 @@ func (f *fakeController) RotateTo(_ context.Context, o orient.Orientation) error
 func (f *fakeController) RotateBy(_ context.Context, n int) error {
 	return f.rec("by " + map[int]string{1: "1", -1: "-1"}[n])
 }
+func (f *fakeController) SetSettle(d time.Duration) error { return f.rec("settle " + d.String()) }
+func (f *fakeController) SetPromptTimeout(d time.Duration) error {
+	return f.rec("prompt " + d.String())
+}
 func (f *fakeController) Accept(context.Context) error { return f.rec("accept") }
 func (f *fakeController) Dismiss()                     { f.rec("dismiss") }
 
@@ -100,6 +104,7 @@ func setup(t *testing.T) (*fakeController, *Service, *Client) {
 	fc := &fakeController{st: core.State{
 		Mode: core.Manual, Locked: true, Device: orient.PortraitCW,
 		Screen: orient.Landscape, Suggested: orient.Unknown, IMU: true,
+		Settle: 700 * time.Millisecond, PromptTimeout: 8 * time.Second,
 	}}
 	svc, err := Export(connect(t, addr), fc)
 	if err != nil {
@@ -122,6 +127,8 @@ func TestMethodsReachController(t *testing.T) {
 		{"RotateTo", []any{"portrait-ccw"}},
 		{"RotateBy", []any{int32(1)}},
 		{"RotateBy", []any{int32(-1)}},
+		{"SetSettleMs", []any{int32(1200)}},
+		{"SetPromptTimeoutMs", []any{int32(9000)}},
 		{"Accept", nil},
 		{"Dismiss", nil},
 	}
@@ -131,7 +138,7 @@ func TestMethodsReachController(t *testing.T) {
 		}
 	}
 	want := []string{"mode auto", "toggle-mode", "lock", "unlock", "toggle-lock",
-		"to portrait-ccw", "by 1", "by -1", "accept", "dismiss"}
+		"to portrait-ccw", "by 1", "by -1", "settle 1.2s", "prompt 9s", "accept", "dismiss"}
 	if got := fc.recorded(); !reflect.DeepEqual(got, want) {
 		t.Errorf("calls = %v\nwant    %v", got, want)
 	}
@@ -144,6 +151,9 @@ func TestBadArgumentsAreDBusErrors(t *testing.T) {
 	}
 	if err := cl.Call("RotateTo", "diagonal"); err == nil {
 		t.Error("RotateTo(diagonal) should fail")
+	}
+	if err := cl.Call("SetSettleMs", int32(-5)); err == nil {
+		t.Error("SetSettleMs(-5) should fail")
 	}
 	if got := fc.recorded(); len(got) != 0 {
 		t.Errorf("controller called with bad args: %v", got)
@@ -161,7 +171,8 @@ func TestInitialPropertiesAndStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Status{Mode: "manual", Locked: true, Device: "portrait-cw", Screen: "landscape", Suggested: "", IMU: true}
+	want := Status{Mode: "manual", Locked: true, Device: "portrait-cw", Screen: "landscape", Suggested: "", IMU: true,
+		SettleMs: 700, PromptTimeoutMs: 8000}
 	if got != want {
 		t.Errorf("Status = %+v, want %+v", got, want)
 	}
@@ -219,7 +230,7 @@ func TestIntrospectionListsMethods(t *testing.T) {
 	if err := cl.conn.Object(BusName, ObjectPath).Call("org.freedesktop.DBus.Introspectable.Introspect", 0).Store(&xml); err != nil {
 		t.Fatal(err)
 	}
-	for _, m := range []string{"ToggleLock", "RotateBy", "Accept", "ScreenOrientation"} {
+	for _, m := range []string{"ToggleLock", "RotateBy", "Accept", "ScreenOrientation", "SetSettleMs", "PromptTimeoutMs"} {
 		if !strings.Contains(xml, `"`+m+`"`) {
 			t.Errorf("introspection is missing %s", m)
 		}

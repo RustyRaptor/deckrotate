@@ -38,3 +38,17 @@ function summary(b) {
         state = b.mode === "manual" ? "Manual" : "Auto-rotate"
     return state + " · " + label(b.screen)
 }
+
+// Mirrors the daemon's limits (internal/core); the daemon has the final say.
+const settleRange = { from: 100, to: 3000, step: 100 }
+const promptRange = { from: 2000, to: 30000, step: 1000 }
+
+function seconds(ms) {
+    const s = ms / 1000
+    return (Number.isInteger(s) ? String(s) : s.toFixed(1)) + " s"
+}
+
+function parseSeconds(text) {
+    const m = String(text).trim().replace(",", ".").match(/^([0-9]+(?:\.[0-9]+)?)\s*s?$/)
+    return m ? Math.round(parseFloat(m[1]) * 1000) : NaN
+}

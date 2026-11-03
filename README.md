@@ -11,13 +11,15 @@ instead (see [docs/hardware.md](docs/hardware.md)).
 ## Features
 
 - **Auto mode**: the screen follows the Deck as soon as it settles in a new
-  position (0.5 s).
+  position (0.5 s by default, adjustable from 0.1 to 3 s).
 - **Manual mode**: turning the Deck shows a round button in the bottom-right
-  corner, as you're now holding it, for 5 seconds. Tap it to rotate.
+  corner, as you're now holding it, for 5 seconds (adjustable from 2 to 30 s).
+  Tap it to rotate.
 - **Lock**: stops both modes reacting to the sensor. Explicit rotations from the
   applet, CLI or shortcuts still work.
 - **Tray applet**: pick any of the four orientations, rotate left/right, lock,
-  and switch modes. Middle-click the tray icon to toggle the lock.
+  switch modes and adjust both timings. Middle-click the tray icon to toggle
+  the lock.
 - **Global shortcuts** for lock, rotate left/right/flip, each orientation,
   mode toggle, and "accept" for the manual-mode button.
 - Lying the Deck flat, or shaking it, never triggers a rotation.
@@ -60,6 +62,8 @@ deckrotate lock | unlock | toggle-lock
 deckrotate mode auto|manual|toggle
 deckrotate rotate cw|ccw|flip
 deckrotate rotate landscape|portrait-cw|landscape-flipped|portrait-ccw
+deckrotate settle 700ms          # 100ms to 3s
+deckrotate prompt-timeout 8s     # 2s to 30s
 deckrotate accept     # take the manual-mode button's rotation
 deckrotate dismiss
 ```
@@ -109,9 +113,12 @@ Service and interface `io.github.RustyRaptor.DeckRotate`, object
 | `ScreenOrientation`    | s    | what the panel is rotated for           |
 | `SuggestedOrientation` | s    | manual-mode offer, empty when none      |
 | `ImuAvailable`         | b    |                                         |
+| `SettleMs`             | i    | settle time in milliseconds             |
+| `PromptTimeoutMs`      | i    | manual-mode button lifetime in ms       |
 
 Methods: `SetMode(s)`, `ToggleMode()`, `SetLocked(b)`, `ToggleLock()`,
-`RotateTo(s)`, `RotateBy(i quarterTurnsClockwise)`, `Accept()`, `Dismiss()`.
+`RotateTo(s)`, `RotateBy(i quarterTurnsClockwise)`, `SetSettleMs(i)`,
+`SetPromptTimeoutMs(i)`, `Accept()`, `Dismiss()`.
 Properties emit `PropertiesChanged`.
 
 ## Development

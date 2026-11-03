@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -30,6 +31,8 @@ const usage = `usage: deckrotate <command>
   mode auto|manual|toggle
   rotate cw|ccw|flip      turn the screen from where it is now
   rotate landscape|portrait-cw|landscape-flipped|portrait-ccw
+  settle <duration>       how long the Deck must hold still before it counts (100ms-3s)
+  prompt-timeout <dur>    how long the manual-mode button stays up (2s-30s)
   accept                  take the rotation the manual-mode button offers
   dismiss                 hide the manual-mode button
 `
@@ -102,6 +105,21 @@ func parseCommand(args []string) (string, []any, error) {
 			return "", nil, err
 		}
 		return "SetMode", []any{m}, nil
+	case "settle", "prompt-timeout":
+		v, err := arg()
+		if err != nil {
+			return "", nil, err
+		}
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return "", nil, err
+		}
+		ms := d.Milliseconds()
+		if ms <= 0 || ms > math.MaxInt32 {
+			return "", nil, fmt.Errorf("%s: %v is out of range", args[0], d)
+		}
+		method := map[string]string{"settle": "SetSettleMs", "prompt-timeout": "SetPromptTimeoutMs"}[args[0]]
+		return method, []any{int32(ms)}, nil
 	case "rotate":
 		r, err := arg()
 		if err != nil {
@@ -136,6 +154,8 @@ func formatStatus(s service.Status) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "mode:      %s\nlocked:    %s\ndevice:    %s\nscreen:    %s\nsuggested: %s\nimu:       %s\n",
 		s.Mode, yn[s.Locked], s.Device, s.Screen, sug, imu[s.IMU])
+	ms := func(v int32) time.Duration { return time.Duration(v) * time.Millisecond }
+	fmt.Fprintf(&b, "settle:    %v\nbutton:    %v\n", ms(s.SettleMs), ms(s.PromptTimeoutMs))
 	return b.String()
 }
 
@@ -175,8 +195,6 @@ func runDaemon(args []string) error {
 	o := daemon.Options{SysRoot: "/sys"}
 	fs.StringVar(&o.UIDir, "ui-dir", defaultUIDir(), "directory containing overlay.qml")
 	fs.StringVar(&o.QMLBin, "qml", "/usr/lib/qt6/bin/qml", "QML runtime used for the overlay")
-	fs.DurationVar(&o.Settle, "settle", 500*time.Millisecond, "how long an orientation must hold before it counts")
-	fs.DurationVar(&o.PromptTimeout, "prompt-timeout", 5*time.Second, "how long the manual-mode button stays up")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}

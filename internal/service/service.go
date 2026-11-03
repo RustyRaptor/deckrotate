@@ -4,6 +4,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -33,6 +34,8 @@ type Controller interface {
 	ToggleLock(context.Context) error
 	RotateTo(context.Context, orient.Orientation) error
 	RotateBy(context.Context, int) error
+	SetSettle(time.Duration) error
+	SetPromptTimeout(time.Duration) error
 	Accept(context.Context) error
 	Dismiss()
 }
@@ -45,6 +48,9 @@ type Status struct {
 	Screen    string
 	Suggested string // empty when nothing is being offered
 	IMU       bool
+
+	SettleMs        int32
+	PromptTimeoutMs int32
 }
 
 func statusOf(s core.State) Status {
@@ -56,6 +62,8 @@ func statusOf(s core.State) Status {
 		Mode: s.Mode.String(), Locked: s.Locked,
 		Device: s.Device.String(), Screen: s.Screen.String(),
 		Suggested: sug, IMU: s.IMU,
+		SettleMs:        int32(s.Settle / time.Millisecond),
+		PromptTimeoutMs: int32(s.PromptTimeout / time.Millisecond),
 	}
 }
 
@@ -67,6 +75,8 @@ func (s Status) props() map[string]any {
 		"ScreenOrientation":    s.Screen,
 		"SuggestedOrientation": s.Suggested,
 		"ImuAvailable":         s.IMU,
+		"SettleMs":             s.SettleMs,
+		"PromptTimeoutMs":      s.PromptTimeoutMs,
 	}
 }
 
@@ -134,6 +144,29 @@ func (o object) RotateBy(turns int32) *dbus.Error {
 	return fail(o.c.RotateBy(c, int(turns)))
 }
 
+func positiveMs(ms int32) (time.Duration, error) {
+	if ms <= 0 {
+		return 0, fmt.Errorf("%d ms: must be positive", ms)
+	}
+	return time.Duration(ms) * time.Millisecond, nil
+}
+
+func (o object) SetSettleMs(ms int32) *dbus.Error {
+	d, err := positiveMs(ms)
+	if err != nil {
+		return fail(err)
+	}
+	return fail(o.c.SetSettle(d))
+}
+
+func (o object) SetPromptTimeoutMs(ms int32) *dbus.Error {
+	d, err := positiveMs(ms)
+	if err != nil {
+		return fail(err)
+	}
+	return fail(o.c.SetPromptTimeout(d))
+}
+
 func (o object) Accept() *dbus.Error {
 	c, cancel := ctx()
 	defer cancel()
@@ -152,6 +185,8 @@ var methods = []introspect.Method{
 	{Name: "ToggleLock"},
 	{Name: "RotateTo", Args: []introspect.Arg{{Name: "orientation", Type: "s", Direction: "in"}}},
 	{Name: "RotateBy", Args: []introspect.Arg{{Name: "quarterTurnsClockwise", Type: "i", Direction: "in"}}},
+	{Name: "SetSettleMs", Args: []introspect.Arg{{Name: "ms", Type: "i", Direction: "in"}}},
+	{Name: "SetPromptTimeoutMs", Args: []introspect.Arg{{Name: "ms", Type: "i", Direction: "in"}}},
 	{Name: "Accept"},
 	{Name: "Dismiss"},
 }

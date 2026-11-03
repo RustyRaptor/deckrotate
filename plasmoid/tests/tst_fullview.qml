@@ -115,5 +115,50 @@ Item {
             const t = make({ device: "portrait-cw" })
             verify(child(t.view, "deviceLabel").text.indexOf("Portrait (right grip down)") >= 0)
         }
+    
+        function test_settle_spin_shows_backend_value() {
+            const t = make({ settleMs: 1500 })
+            const spin = child(t.view, "settleSpin")
+            compare(spin.value, 1500)
+            compare(spin.displayText, "1.5 s")
+            compare(spin.from, 100)
+            compare(spin.to, 3000)
+            t.backend.settleMs = 700
+            compare(spin.value, 700)
+        }
+
+        function test_settle_spin_sets_backend() {
+            const t = make({ settleMs: 500 })
+            const spin = child(t.view, "settleSpin")
+            spin.forceActiveFocus()
+            keyClick(Qt.Key_Up)
+            compare(t.backend.calls, ["setSettleMs 600"])
+            // The daemon is the source of truth: the spin snaps back until it replies.
+            compare(spin.value, 500)
+            t.backend.settleMs = 600
+            compare(spin.value, 600)
+        }
+
+        function test_prompt_spin_sets_backend() {
+            const t = make({ mode: "manual", promptTimeoutMs: 5000 })
+            const spin = child(t.view, "promptSpin")
+            compare(spin.displayText, "5 s")
+            spin.forceActiveFocus()
+            keyClick(Qt.Key_Down)
+            compare(t.backend.calls, ["setPromptTimeoutMs 4000"])
+        }
+
+        function test_prompt_spin_only_in_manual_mode() {
+            const t = make({ mode: "auto" })
+            verify(!child(t.view, "promptSpin").enabled)
+            t.backend.mode = "manual"
+            verify(child(t.view, "promptSpin").enabled)
+        }
+
+        function test_timing_disabled_without_sensor() {
+            const t = make({ imu: false, mode: "manual" })
+            verify(!child(t.view, "settleSpin").enabled)
+            verify(!child(t.view, "promptSpin").enabled)
+        }
     }
 }

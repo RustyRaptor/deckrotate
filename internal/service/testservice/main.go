@@ -33,7 +33,7 @@ func (noPrompt) Hide()                        {}
 type memStore struct{ s core.Settings }
 
 func (m *memStore) Load() (core.Settings, error) { return m.s, nil }
-func (m *memStore) Save(s core.Settings) error  { m.s = s; return nil }
+func (m *memStore) Save(s core.Settings) error   { m.s = s; return nil }
 
 func main() {
 	conn, err := dbus.ConnectSessionBus()
