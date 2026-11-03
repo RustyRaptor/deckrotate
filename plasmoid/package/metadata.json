@@ -13,7 +13,7 @@
         "Id": "io.github.rustyraptor.deckrotate",
         "License": "MIT",
         "Name": "Screen Rotation",
-        "Version": "0.1.0",
+        "Version": "0.2.0",
         "Website": "https://github.com/RustyRaptor/deckrotate"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
