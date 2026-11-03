@@ -1,0 +1,60 @@
+[tools]
+go = "1.27.3"
+
+[env]
+CGO_ENABLED = "0"
+
+[tasks.test]
+description = "Run all tests"
+depends = ["test:go", "test:qml", "test:plasmoid", "test:dbus"]
+
+[tasks."test:go"]
+description = "Run Go tests"
+run = "go test ./..."
+
+[tasks."test:qml"]
+description = "Run QML tests offscreen"
+run = "QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 /usr/lib/qt6/bin/qmltestrunner -input ui/tests"
+
+[tasks.check]
+description = "Vet and format check"
+run = ["go vet ./...", "test -z \"$(gofmt -l .)\""]
+
+[tasks.build]
+description = "Build the deckrotate binary"
+run = "go build -o bin/deckrotate ./cmd/deckrotate"
+
+[tasks."test:dbus"]
+description = "Run the applet's D-Bus backend against the real Go service on a private bus"
+run = "./scripts/test-dbus.sh"
+
+[tasks."test:plasmoid"]
+description = "Run the applet's QML tests offscreen"
+run = "QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input plasmoid/tests"
+
+[tasks."test:hw"]
+description = "Run tests that read the real Deck controller"
+run = "DECKROTATE_HW=1 go test ./internal/imu/ -run Hardware -v"
+
+[tasks.install]
+description = "Install the daemon, overlay, applet, shortcuts and systemd unit under $HOME"
+depends = ["build"]
+run = [
+  "install -Dm755 bin/deckrotate ~/.local/bin/deckrotate",
+  "rm -rf ~/.local/share/deckrotate/ui && mkdir -p ~/.local/share/deckrotate && cp -r ui ~/.local/share/deckrotate/ui && rm -rf ~/.local/share/deckrotate/ui/tests",
+  "install -Dm644 packaging/systemd/deckrotate.service ~/.config/systemd/user/deckrotate.service",
+  "mkdir -p ~/.local/share/kglobalaccel && sed \"s|@BINDIR@|$HOME/.local/bin|g\" packaging/kglobalaccel/io.github.rustyraptor.deckrotate.desktop > ~/.local/share/kglobalaccel/io.github.rustyraptor.deckrotate.desktop",
+  "kpackagetool6 -t Plasma/Applet -u plasmoid/package 2>/dev/null || kpackagetool6 -t Plasma/Applet -i plasmoid/package",
+  "systemctl --user daemon-reload",
+  "echo 'installed; enable with: systemctl --user enable --now deckrotate'",
+]
+
+[tasks.uninstall]
+description = "Stop and remove deckrotate from $HOME"
+run = [
+  "systemctl --user disable --now deckrotate || true",
+  "rm -f ~/.local/bin/deckrotate ~/.config/systemd/user/deckrotate.service ~/.local/share/kglobalaccel/io.github.rustyraptor.deckrotate.desktop",
+  "rm -rf ~/.local/share/deckrotate",
+  "kpackagetool6 -t Plasma/Applet -r io.github.rustyraptor.deckrotate || true",
+  "systemctl --user daemon-reload",
+]

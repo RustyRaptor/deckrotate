@@ -1,0 +1,13 @@
+[Unit]
+Description=deckrotate: Steam Deck screen rotation for Plasma
+Documentation=https://github.com/RustyRaptor/deckrotate
+PartOf=graphical-session.target
+After=plasma-workspace.target
+
+[Service]
+ExecStart=%h/.local/bin/deckrotate daemon
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=plasma-workspace.target

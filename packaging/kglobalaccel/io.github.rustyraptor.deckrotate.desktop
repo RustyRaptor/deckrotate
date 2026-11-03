@@ -1,0 +1,59 @@
+[Desktop Entry]
+Type=Application
+Name=Screen Rotation
+Comment=Rotate, auto-rotate and lock the Steam Deck screen
+Icon=transform-rotate
+NoDisplay=true
+StartupNotify=false
+X-KDE-GlobalShortcutType=Service
+Actions=ToggleLock;RotateCW;RotateCCW;Flip;ToggleMode;Accept;Landscape;PortraitCW;PortraitCCW;LandscapeFlipped;
+
+[Desktop Action ToggleLock]
+Name=Lock/Unlock Screen Rotation
+Exec=@BINDIR@/deckrotate toggle-lock
+X-KDE-Shortcuts=
+
+[Desktop Action RotateCW]
+Name=Rotate Screen Right
+Exec=@BINDIR@/deckrotate rotate cw
+X-KDE-Shortcuts=
+
+[Desktop Action RotateCCW]
+Name=Rotate Screen Left
+Exec=@BINDIR@/deckrotate rotate ccw
+X-KDE-Shortcuts=
+
+[Desktop Action Flip]
+Name=Flip Screen Upside Down
+Exec=@BINDIR@/deckrotate rotate flip
+X-KDE-Shortcuts=
+
+[Desktop Action ToggleMode]
+Name=Switch Auto/Manual Rotation
+Exec=@BINDIR@/deckrotate mode toggle
+X-KDE-Shortcuts=
+
+[Desktop Action Accept]
+Name=Rotate to Match the Deck
+Exec=@BINDIR@/deckrotate accept
+X-KDE-Shortcuts=
+
+[Desktop Action Landscape]
+Name=Screen Orientation: Landscape
+Exec=@BINDIR@/deckrotate rotate landscape
+X-KDE-Shortcuts=
+
+[Desktop Action PortraitCW]
+Name=Screen Orientation: Portrait (right grip down)
+Exec=@BINDIR@/deckrotate rotate portrait-cw
+X-KDE-Shortcuts=
+
+[Desktop Action PortraitCCW]
+Name=Screen Orientation: Portrait (left grip down)
+Exec=@BINDIR@/deckrotate rotate portrait-ccw
+X-KDE-Shortcuts=
+
+[Desktop Action LandscapeFlipped]
+Name=Screen Orientation: Landscape (flipped)
+Exec=@BINDIR@/deckrotate rotate landscape-flipped
+X-KDE-Shortcuts=

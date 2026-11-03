@@ -1,0 +1,22 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "RustyRaptor"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Rotate, auto-rotate and lock the Steam Deck screen",
+        "EnabledByDefault": true,
+        "Icon": "transform-rotate",
+        "Id": "io.github.rustyraptor.deckrotate",
+        "License": "MIT",
+        "Name": "Screen Rotation",
+        "Version": "0.1.0",
+        "Website": "https://github.com/RustyRaptor/deckrotate"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-NotificationArea": "true",
+    "X-Plasma-NotificationAreaCategory": "Hardware"
+}

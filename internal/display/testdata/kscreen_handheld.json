@@ -1,0 +1,70 @@
+{
+    "features": 255,
+    "outputs": [
+        {
+            "brightness": 0.7,
+            "clones": [
+            ],
+            "connected": true,
+            "currentModeId": "1",
+            "edrPolicy": 0,
+            "enabled": true,
+            "followPreferredMode": false,
+            "iccProfilePath": "",
+            "icon": "",
+            "id": 1,
+            "maxBpc": 0,
+            "modes": [
+                {
+                    "id": "1",
+                    "name": "800x1280@90",
+                    "refreshRate": 90.06099700927734,
+                    "size": {
+                        "height": 1280,
+                        "width": 800
+                    }
+                }
+            ],
+            "name": "eDP-1",
+            "overscan": 0,
+            "pos": {
+                "x": 0,
+                "y": 0
+            },
+            "preferredModes": [
+                "1"
+            ],
+            "priority": 1,
+            "replicationSource": 0,
+            "rotation": 8,
+            "scale": 1,
+            "size": {
+                "height": 800,
+                "width": 1280
+            },
+            "sizeMM": {
+                "height": 160,
+                "width": 100
+            },
+            "type": 7
+        }
+    ],
+    "screen": {
+        "currentSize": {
+            "height": 1280,
+            "width": 800
+        },
+        "id": 0,
+        "maxActiveOutputsCount": 1,
+        "maxSize": {
+            "height": 64000,
+            "width": 64000
+        },
+        "minSize": {
+            "height": 0,
+            "width": 0
+        }
+    },
+    "tabletModeAvailable": true,
+    "tabletModeEngaged": false
+}
